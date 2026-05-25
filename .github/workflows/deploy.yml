@@ -1,0 +1,71 @@
+name: Build & Deploy to Azure
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:        # lets you trigger manually from GitHub UI
+
+env:
+  ACR_LOGIN_SERVER: ${{ secrets.ACR_NAME }}.azurecr.io
+  RESOURCE_GROUP:   ${{ secrets.RESOURCE_GROUP }}
+
+jobs:
+  # ── 1. Build Docker images and push to Azure Container Registry ─────────────
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Login to ACR
+        run: az acr login --name ${{ secrets.ACR_NAME }}
+
+      - id: tag
+        run: echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+
+      - name: Build & push backend
+        run: |
+          docker build \
+            -t ${{ env.ACR_LOGIN_SERVER }}/aichat-backend:${{ steps.tag.outputs.tag }} \
+            ./backend
+          docker push ${{ env.ACR_LOGIN_SERVER }}/aichat-backend:${{ steps.tag.outputs.tag }}
+
+      - name: Build & push frontend
+        run: |
+          docker build \
+            --build-arg NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }} \
+            -t ${{ env.ACR_LOGIN_SERVER }}/aichat-frontend:${{ steps.tag.outputs.tag }} \
+            ./frontend
+          docker push ${{ env.ACR_LOGIN_SERVER }}/aichat-frontend:${{ steps.tag.outputs.tag }}
+
+  # ── 2. Deploy updated images to Azure Container Apps ───────────────────────
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy backend
+        run: |
+          az containerapp update \
+            --name aichat-backend \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --image ${{ env.ACR_LOGIN_SERVER }}/aichat-backend:${{ needs.build.outputs.tag }}
+
+      - name: Deploy frontend
+        run: |
+          az containerapp update \
+            --name aichat-frontend \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --image ${{ env.ACR_LOGIN_SERVER }}/aichat-frontend:${{ needs.build.outputs.tag }}
