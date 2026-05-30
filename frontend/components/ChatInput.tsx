@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useEffect, useState, KeyboardEvent } from "react";
+import { useRef, useEffect, useState, KeyboardEvent, ClipboardEvent } from "react";
+import { ImagePlus, Mic, MicOff, SendHorizontal, X } from "lucide-react";
 
 // Browser SpeechRecognition API typings (not in default TS lib)
 interface SpeechRecognitionEvent {
@@ -24,11 +25,20 @@ declare global {
   }
 }
 
+export interface AttachedFile {
+  base64: string;
+  mediaType: string;
+  fileName: string;
+  previewUrl?: string;
+}
+
 interface ChatInputProps {
   readonly value: string;
   readonly onChange: (value: string) => void;
   readonly onSend: () => void;
   readonly disabled: boolean;
+  readonly attachedFile: AttachedFile | null;
+  readonly onFileAttach: (file: AttachedFile | null) => void;
 }
 
 export default function ChatInput({
@@ -36,14 +46,49 @@ export default function ChatInput({
   onChange,
   onSend,
   disabled,
+  attachedFile,
+  onFileAttach,
 }: Readonly<ChatInputProps>) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<ISpeechRecognition | null>(null);
   const [isListening, setIsListening] = useState(false);
-  const baseTextRef = useRef(""); // text before voice started
+  const baseTextRef = useRef("");
+
+  // Handle file -> base64 and optional preview
+  function processFile(file: File) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      const [header, base64] = dataUrl.split(",");
+      const mediaType = header.replace("data:", "").replace(";base64", "");
+      const isImage = mediaType.startsWith("image/");
+      onFileAttach({
+        base64,
+        mediaType,
+        fileName: file.name,
+        previewUrl: isImage ? dataUrl : undefined,
+      });
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // Paste: capture image from clipboard (e.g. screenshot paste)
+  function handlePaste(e: ClipboardEvent<HTMLTextAreaElement>) {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of Array.from(items)) {
+      if (item.type.startsWith("image/")) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) processFile(file);
+        return;
+      }
+    }
+  }
 
   function toggleVoice() {
-    const SR = window.SpeechRecognition ?? window.webkitSpeechRecognition;
+    const SR = (globalThis as any).SpeechRecognition ?? (globalThis as any).webkitSpeechRecognition;
     if (!SR) {
       alert("Your browser doesn't support voice input. Try Chrome or Edge.");
       return;
@@ -57,17 +102,16 @@ export default function ChatInput({
     const rec = new SR();
     rec.lang = "en-US";
     rec.interimResults = true;
-    rec.continuous = true; // keep recording until mic button clicked again
+    rec.continuous = true;
 
-    baseTextRef.current = value.trimEnd(); // save what's already typed
+    baseTextRef.current = value.trimEnd();
     recognitionRef.current = rec;
     setIsListening(true);
 
     rec.onresult = (e: { results: SpeechRecognitionResultList; resultIndex: number }) => {
-      // Accumulate all results (finals + current interim) for live display
       let full = "";
-      for (let i = 0; i < e.results.length; i++) {
-        full += e.results[i][0].transcript;
+      for (const result of e.results) {
+        full += result[0].transcript;
       }
       const prefix = baseTextRef.current ? baseTextRef.current + " " : "";
       onChange(prefix + full.trim());
@@ -75,7 +119,6 @@ export default function ChatInput({
 
     rec.onend = () => {
       setIsListening(false);
-      // Re-focus textarea so send button click registers immediately
       setTimeout(() => textareaRef.current?.focus(), 50);
     };
     rec.onerror = () => {
@@ -96,18 +139,48 @@ export default function ChatInput({
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (!disabled && value.trim()) onSend();
+      if (!disabled && (value.trim() || attachedFile)) onSend();
     }
   }
 
   return (
-    <div className="border-t border-gray-100 dark:border-white/[0.06] bg-white dark:bg-gray-900 px-4 py-4">
-      <div className="max-w-4xl mx-auto">
+    <div className="border-t border-[var(--border-soft)] bg-[var(--surface-1)]/80 px-3 sm:px-4 py-3 sm:py-4">
+      <div className="max-w-5xl mx-auto fade-in-up">
+
+        {/* Image preview strip */}
+        {attachedFile && (
+          <div className="flex items-center gap-2 mb-2 px-1">
+            <div className="relative group">
+              {attachedFile.previewUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={attachedFile.previewUrl}
+                  alt={attachedFile.fileName}
+                  className="h-16 rounded-xl border border-[var(--border-soft)] object-cover shadow-sm"
+                />
+              ) : (
+                <div className="h-16 min-w-52 max-w-72 px-3 rounded-xl border border-[var(--border-soft)] bg-[var(--surface-2)] flex items-center gap-2 shadow-sm">
+                  <ImagePlus className="w-4 h-4 text-[var(--accent-2)] shrink-0" strokeWidth={2.2} />
+                  <span className="text-xs text-[var(--text-2)] truncate">{attachedFile.fileName}</span>
+                </div>
+              )}
+              <button
+                onClick={() => onFileAttach(null)}
+                className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[var(--surface-3)] text-[var(--text-1)] rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                title="Remove file"
+              >
+                <X className="w-3 h-3" strokeWidth={2.5} />
+              </button>
+            </div>
+            <span className="text-xs text-[var(--text-3)]">File attached: {attachedFile.fileName}</span>
+          </div>
+        )}
+
         <div
-          className={`flex gap-3 items-end bg-gray-50 dark:bg-gray-800/80 border rounded-2xl px-4 py-3 transition-all ${ 
+          className={`glass-panel flex gap-2 sm:gap-3 items-end border rounded-2xl px-3 sm:px-4 py-2.5 sm:py-3 transition-all ${
             disabled
-              ? "border-gray-100 dark:border-white/[0.04]"
-              : "border-gray-200 dark:border-white/[0.08] focus-within:border-blue-400 dark:focus-within:border-blue-500/50 focus-within:ring-4 focus-within:ring-blue-500/10 dark:focus-within:ring-blue-500/10 shadow-sm"
+              ? "opacity-75"
+              : "focus-within:border-[var(--accent-1)]/45 focus-within:ring-4 focus-within:ring-[var(--ring-soft)] shadow-sm"
           }`}
         >
           <textarea
@@ -115,12 +188,41 @@ export default function ChatInput({
             value={value}
             onChange={(e) => onChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Message AI Chat…  (Shift+Enter for new line)"
+            onPaste={handlePaste}
+            placeholder="Message Aura... (or paste a screenshot)"
             disabled={disabled}
             rows={1}
-            className="flex-1 bg-transparent resize-none outline-none text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-sm leading-relaxed max-h-40 disabled:opacity-50"
+            className="flex-1 bg-transparent resize-none outline-none text-[var(--text-1)] placeholder-[var(--text-3)] text-sm leading-relaxed max-h-40 disabled:opacity-50"
           />
 
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="*/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) processFile(file);
+              e.target.value = "";
+            }}
+          />
+
+          {/* Image attach button */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={disabled}
+            title="Attach file"
+            className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all shrink-0 mb-0.5 ${
+              attachedFile
+                ? "bg-[var(--accent-soft)] text-[var(--accent-2)]"
+                : "text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[var(--surface-2)]"
+            } disabled:opacity-40`}
+          >
+            <ImagePlus className="w-4 h-4 icon-pop" strokeWidth={2.2} />
+          </button>
+
+          {/* Voice button */}
           <button
             onClick={toggleVoice}
             disabled={disabled}
@@ -128,34 +230,34 @@ export default function ChatInput({
             className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all shrink-0 mb-0.5 ${
               isListening
                 ? "bg-red-500 text-white animate-pulse shadow-md shadow-red-500/40"
-                : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/[0.08]"
+                : "text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[var(--surface-2)]"
             } disabled:opacity-40`}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-              <path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
-              <path d="M5.5 9.643a.75.75 0 00-1.5 0V10c0 3.06 2.29 5.585 5.25 5.954V17.5h-1.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-1.5v-1.546A6.001 6.001 0 0016 10v-.357a.75.75 0 00-1.5 0V10a4.5 4.5 0 01-9 0v-.357z" />
-            </svg>
+            {isListening ? (
+              <MicOff className="w-4 h-4" strokeWidth={2.2} />
+            ) : (
+              <Mic className="w-4 h-4 icon-pop" strokeWidth={2.2} />
+            )}
           </button>
 
+          {/* Send button */}
           <button
-            onClick={() => { if (isListening) recognitionRef.current?.stop(); onSend(); }}
-            disabled={disabled || !value.trim()}
-            className="w-8 h-8 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-200 dark:disabled:bg-gray-700 text-white disabled:text-gray-400 rounded-xl flex items-center justify-center transition-all shrink-0 mb-0.5 shadow-sm shadow-blue-500/30 disabled:shadow-none"
+            onClick={() => {
+              if (isListening) {
+                recognitionRef.current?.stop();
+              }
+              onSend();
+            }}
+            disabled={disabled || (!value.trim() && !attachedFile)}
+            className="w-8 h-8 bg-[var(--surface-1)] border border-[var(--accent-1)] hover:bg-[var(--accent-soft)] disabled:bg-[var(--surface-2)] text-[var(--accent-1)] disabled:text-[var(--text-3)] rounded-xl flex items-center justify-center transition-all shrink-0 mb-0.5 shadow-sm shadow-emerald-900/20 disabled:shadow-none"
             title="Send message"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              className="w-4 h-4 -rotate-45 translate-x-px"
-            >
-              <path d="M3.105 2.289a.75.75 0 00-.826.95l1.414 4.925A1.5 1.5 0 005.135 9.25h6.115a.75.75 0 010 1.5H5.135a1.5 1.5 0 00-1.442 1.086l-1.414 4.926a.75.75 0 00.826.95 28.896 28.896 0 0015.293-7.154.75.75 0 000-1.115A28.897 28.897 0 003.105 2.289z" />
-            </svg>
+            <SendHorizontal className="w-4 h-4 translate-x-px" strokeWidth={2.4} />
           </button>
         </div>
 
-        <p className="text-xs text-gray-400 dark:text-gray-600 text-center mt-2">
-          <kbd className="font-sans">Enter</kbd> to send · <kbd className="font-sans">Shift+Enter</kbd> for new line · mic for voice
+        <p className="text-xs text-[var(--text-3)] text-center mt-2">
+          <kbd className="font-sans">Enter</kbd> to send · <kbd className="font-sans">Shift+Enter</kbd> for new line · paste image or attach any file
         </p>
       </div>
     </div>

@@ -6,3 +6,13 @@ python-dotenv==1.2.2
 openai==2.35.1
 pydantic==2.13.4
 python-multipart==0.0.27
+httpx==0.28.1
+
+# Phoenix LLM observability
+arize-phoenix-otel
+openinference-instrumentation-openai
+opentelemetry-sdk
+opentelemetry-exporter-otlp-proto-http
+pyjwt[crypto]
+pypdf==4.2.0
+

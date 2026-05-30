@@ -30,7 +30,11 @@ class Message(Base):
         ForeignKey("conversations.id"),
     )
 
+    file_name = Column(String(255), nullable=True)
+    file_media_type = Column(String(100), nullable=True)
+    file_base64 = Column(Text, nullable=True)
+
     conversation = relationship(
         "Conversation",
         back_populates="messages",
-    )
+    )

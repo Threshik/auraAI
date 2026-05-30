@@ -1,0 +1,291 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+body {
+  font-family: 'Space Grotesk', -apple-system, sans-serif !important;
+  background-color: #101714 !important;
+  background-image: 
+    radial-gradient(circle at 12% 8%, rgba(56, 197, 154, 0.12) 0, transparent 34%),
+    radial-gradient(circle at 88% 100%, rgba(56, 197, 154, 0.14) 0, transparent 30%),
+    linear-gradient(155deg, #14201b 0%, #101714 55%, #080d0b 100%) !important;
+  background-size: cover !important;
+  height: 100vh !important;
+  margin: 0 !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  width: 100% !important;
+}
+
+/* Base structural overrides to center and style Keycloak wrappers */
+.login-pf-page {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  min-height: 100vh !important;
+  width: 100% !important;
+}
+
+#kc-container-wrapper {
+  display: flex !important;
+  justify-content: center !important;
+  width: 100% !important;
+}
+
+#kc-header-wrapper {
+  display: none !important; /* Hide default keycloak header */
+}
+
+/* Card Styling */
+.card-pf, .login-pf-page .card-pf {
+  background: rgba(20, 32, 27, 0.55) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(41, 66, 56, 0.6) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5) !important;
+  padding: 40px !important;
+  max-width: 560px !important; /* Increased width for both Login and Register cards */
+  width: 100% !important;
+  position: relative !important;
+  box-sizing: border-box !important;
+}
+
+.card-pf::before {
+  content: "" !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: 160px !important;
+  height: 2px !important;
+  background: linear-gradient(90deg, #38c59a, #25ab82) !important;
+  border-radius: 0 0 100px 100px !important;
+  box-shadow: 0 0 12px rgba(56, 197, 154, 0.4) !important;
+}
+
+/* Typography */
+h1#kc-page-title, .login-pf-page .card-pf h1 {
+  color: #e9f2ee !important;
+  font-size: 26px !important;
+  font-weight: 700 !important;
+  text-align: center !important;
+  margin-bottom: 24px !important;
+  letter-spacing: -0.5px !important;
+}
+
+.login-pf-page .card-pf h1::after {
+  content: "Aura AI" !important;
+  display: block !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 2px !important;
+  color: #38c59a !important;
+  margin-top: 6px !important;
+  opacity: 0.8 !important;
+}
+
+label {
+  color: #b3c4bc !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  margin-bottom: 6px !important;
+  display: block !important;
+}
+
+/* Form Controls / Inputs */
+input.form-control, .pf-c-form-control {
+  background-color: rgba(20, 32, 27, 0.8) !important;
+  border: 1px solid #294238 !important;
+  border-radius: 12px !important;
+  color: #e9f2ee !important;
+  padding: 14px 18px !important;
+  font-size: 14px !important;
+  transition: all 0.24s ease !important;
+  height: auto !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+input.form-control:focus, .pf-c-form-control:focus {
+  border-color: rgba(56, 197, 154, 0.6) !important;
+  box-shadow: 0 0 0 3px rgba(56, 197, 154, 0.15) !important;
+  background-color: rgba(27, 43, 37, 0.9) !important;
+  outline: none !important;
+}
+
+/* Input group container styling for password fields (fixing the white/gray boxes) */
+.pf-c-input-group, .input-group {
+  display: flex !important;
+  background-color: rgba(20, 32, 27, 0.8) !important;
+  border: 1px solid #294238 !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  transition: all 0.24s ease !important;
+}
+
+.pf-c-input-group:focus-within, .input-group:focus-within {
+  border-color: rgba(56, 197, 154, 0.6) !important;
+  box-shadow: 0 0 0 3px rgba(56, 197, 154, 0.15) !important;
+}
+
+.pf-c-input-group input.form-control, 
+.pf-c-input-group .pf-c-form-control,
+.input-group input {
+  border: none !important;
+  background: transparent !important;
+  flex: 1 !important;
+  width: 100% !important;
+  box-shadow: none !important;
+}
+
+/* Specific styling for the eye toggle button */
+.pf-c-input-group button.pf-c-button.pf-m-control,
+.input-group button.pf-c-button.pf-m-control,
+.input-group button,
+.input-group-addon {
+  border: none !important;
+  background: transparent !important;
+  color: #b3c4bc !important;
+  cursor: pointer !important;
+  padding: 0 16px !important;
+  margin: 0 !important; /* Reset margins */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: color 0.2s ease !important;
+  width: auto !important; /* Fixed: prevents eye icon button from taking 100% width */
+  flex: none !important;
+  box-shadow: none !important;
+  align-self: center !important; /* Force vertical centering in flexbox container */
+}
+
+.pf-c-input-group button.pf-c-button.pf-m-control:hover,
+.input-group button.pf-c-button.pf-m-control:hover,
+.input-group button:hover {
+  color: #38c59a !important;
+  background: transparent !important;
+}
+
+/* Fix: Remove PatternFly's default pseudo-element borders/backgrounds on the eye button */
+.pf-c-input-group button.pf-c-button.pf-m-control::before,
+.pf-c-input-group button.pf-c-button.pf-m-control::after,
+.input-group button.pf-c-button.pf-m-control::before,
+.input-group button.pf-c-button.pf-m-control::after,
+.input-group button::before,
+.input-group button::after {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  display: none !important;
+}
+
+/* Buttons */
+.btn-primary, .pf-c-button.pf-m-primary {
+  background: linear-gradient(90deg, #38c59a, #25ab82) !important;
+  border: none !important;
+  border-radius: 12px !important;
+  color: #ffffff !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  padding: 14px 20px !important;
+  cursor: pointer !important;
+  transition: all 0.24s ease !important;
+  box-shadow: 0 4px 12px rgba(56, 197, 154, 0.15) !important;
+  text-transform: none !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.btn-primary:hover, .pf-c-button.pf-m-primary:hover {
+  background: linear-gradient(90deg, #25ab82, #38c59a) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 16px rgba(56, 197, 154, 0.25) !important;
+}
+
+/* Links & Registration */
+a {
+  color: #38c59a !important;
+  font-weight: 500 !important;
+  text-decoration: none !important;
+  transition: color 0.2s ease !important;
+}
+
+a:hover {
+  color: #25ab82 !important;
+  text-decoration: underline !important;
+}
+
+#kc-registration {
+  margin-top: 20px !important;
+  text-align: center !important;
+  color: #88a095 !important;
+  font-size: 13px !important;
+}
+
+/* Social Logins (Google) */
+#kc-social-providers {
+  margin-top: 24px !important;
+  border-top: 1px solid #294238 !important;
+  padding-top: 20px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+#kc-social-providers ul {
+  padding: 0 !important;
+  margin: 0 !important;
+  list-style: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+
+#kc-social-providers ul li {
+  width: 100% !important;
+}
+
+/* Stylings target specifically to social login provider links */
+#kc-social-providers a.zocial,
+#kc-social-providers a.pf-c-button,
+#kc-social-providers .zocial {
+  background-color: rgba(20, 32, 27, 0.8) !important;
+  border: 1px solid #294238 !important;
+  border-radius: 12px !important;
+  color: #e9f2ee !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  padding: 14px 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  transition: all 0.24s ease !important;
+  text-decoration: none !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+#kc-social-providers a.zocial:hover,
+#kc-social-providers a.pf-c-button:hover,
+#kc-social-providers .zocial:hover {
+  background-color: rgba(27, 43, 37, 0.9) !important;
+  border-color: #38c59a !important;
+  color: #ffffff !important;
+}
+
+/* Error/Info Alerts */
+.alert-error, .pf-c-alert.pf-m-danger {
+  background-color: rgba(239, 68, 68, 0.1) !important;
+  border: 1px solid rgba(239, 68, 68, 0.3) !important;
+  color: #ef4444 !important;
+  border-radius: 12px !important;
+  padding: 12px !important;
+  margin-bottom: 16px !important;
+  font-size: 13px !important;
+}

@@ -5,15 +5,50 @@
 @variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f6f7f2;
+  --foreground: #1d2424;
+
+  --surface-0: #f6f7f2;
+  --surface-1: #ffffff;
+  --surface-2: #edf1ec;
+  --surface-3: #dfe8dd;
+
+  --text-1: #1d2424;
+  --text-2: #4c5a59;
+  --text-3: #72817f;
+
+  --accent-1: #0a8f6f;
+  --accent-2: #0d7d63;
+  --accent-soft: #d8f0e8;
+  --border-soft: #d4ddd8;
+  --ring-soft: rgba(10, 143, 111, 0.18);
+}
+
+.dark {
+  --background: #101714;
+  --foreground: #e9f2ee;
+
+  --surface-0: #101714;
+  --surface-1: #14201b;
+  --surface-2: #1b2b25;
+  --surface-3: #23362f;
+
+  --text-1: #e9f2ee;
+  --text-2: #b3c4bc;
+  --text-3: #88a095;
+
+  --accent-1: #38c59a;
+  --accent-2: #25ab82;
+  --accent-soft: #1f3d34;
+  --border-soft: #294238;
+  --ring-soft: rgba(56, 197, 154, 0.2);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-space-grotesk);
+  --font-mono: var(--font-ibm-plex-mono);
 }
 
 html,
@@ -23,20 +58,276 @@ body {
 
 body {
   color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-space-grotesk), "Segoe UI", sans-serif;
+  background:
+    radial-gradient(circle at 12% 8%, color-mix(in oklab, var(--accent-1) 12%, transparent) 0, transparent 34%),
+    radial-gradient(circle at 88% 100%, color-mix(in oklab, var(--accent-1) 14%, transparent) 0, transparent 30%),
+    linear-gradient(155deg, color-mix(in oklab, var(--surface-0) 92%, white 8%) 0%, var(--surface-0) 55%, color-mix(in oklab, var(--surface-0) 88%, black 12%) 100%);
+}
+
+* {
+  border-color: var(--border-soft);
+}
+
+.glass-panel {
+  background: color-mix(in oklab, var(--surface-1) 84%, transparent);
+  backdrop-filter: blur(12px);
+  border: 1px solid color-mix(in oklab, var(--border-soft) 75%, transparent);
+}
+
+.lift-on-hover {
+  transition: transform 0.24s ease, box-shadow 0.24s ease, border-color 0.24s ease;
+}
+
+.lift-on-hover:hover {
+  transform: translateY(-2px);
+}
+
+.icon-pop {
+  transition: transform 0.22s ease, color 0.22s ease, filter 0.22s ease;
+}
+
+.icon-pop:hover {
+  transform: translateY(-1px) scale(1.08);
+  filter: drop-shadow(0 4px 10px color-mix(in oklab, var(--accent-1) 28%, transparent));
+}
+
+.icon-spin-on-hover {
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.icon-spin-on-hover:hover {
+  transform: rotate(15deg) scale(1.05);
+}
+
+.orbital-ring {
+  position: relative;
+}
+
+.orbital-ring::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  border: 1px dashed color-mix(in oklab, var(--accent-1) 45%, transparent);
+  opacity: 0.5;
+  animation: orbitSpin 12s linear infinite;
+}
+
+.glow-pulse {
+  animation: glowPulse 2.8s ease-in-out infinite;
+}
+
+.sweep-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.sweep-shine::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 48%;
+  height: 100%;
+  background: linear-gradient(110deg, transparent, color-mix(in oklab, white 75%, transparent), transparent);
+  transform: skewX(-20deg);
+  animation: shineSweep 4.6s ease-in-out infinite;
+}
+
+.streaming-border {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--surface-1), var(--surface-1)) padding-box,
+    linear-gradient(115deg, color-mix(in oklab, var(--accent-1) 20%, transparent), var(--accent-1), color-mix(in oklab, var(--accent-1) 20%, transparent)) border-box;
+  background-size: 100% 100%, 220% 100%;
+  animation: borderFlow 2.2s linear infinite;
+}
+
+.fade-in-up {
+  animation: fadeInUp 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.stagger-children > * {
+  opacity: 0;
+  transform: translateY(8px);
+  animation: fadeInUp 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.stagger-children > *:nth-child(1) {
+  animation-delay: 30ms;
+}
+
+.stagger-children > *:nth-child(2) {
+  animation-delay: 70ms;
+}
+
+.stagger-children > *:nth-child(3) {
+  animation-delay: 110ms;
+}
+
+.stagger-children > *:nth-child(4) {
+  animation-delay: 150ms;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes orbitSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes glowPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent-1) 0%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 8px color-mix(in oklab, var(--accent-1) 12%, transparent);
+  }
+}
+
+@keyframes shineSweep {
+  0%,
+  24% {
+    left: -120%;
+  }
+  44%,
+  100% {
+    left: 130%;
+  }
+}
+
+@keyframes borderFlow {
+  from {
+    background-position: 0 0, 0% 0;
+  }
+  to {
+    background-position: 0 0, 220% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-in-up,
+  .stagger-children > *,
+  .orbital-ring::after,
+  .glow-pulse,
+  .sweep-shine::before,
+  .streaming-border {
+    animation: none !important;
+  }
+
+  .lift-on-hover,
+  .icon-pop,
+  .icon-spin-on-hover {
+    transition: none !important;
+  }
 }
 
 /* Thin scrollbar for sidebar and chat area */
 ::-webkit-scrollbar {
-  width: 4px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d1d5db;
+  background: color-mix(in oklab, var(--text-3) 55%, transparent);
   border-radius: 99px;
+  border: 2px solid transparent;
+  background-clip: content-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  background: color-mix(in oklab, var(--text-2) 68%, transparent);
 }
+
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ring-soft);
+}
+
+/* Remove default focus shadow boxes on inputs and textareas */
+input:focus,
+input:focus-visible,
+textarea:focus,
+textarea:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Print Styles for Exporting Chat to PDF */
+@media print {
+  /* Hide interactive elements, sidebars, headers, inputs marked with print-hide */
+  .print-hide,
+  aside,
+  header,
+  button,
+  textarea,
+  input {
+    display: none !important;
+  }
+
+  /* Reset layout constraints to allow full document expansion and standard printing */
+  html, body {
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Expand main layout wrappers */
+  div.relative.flex.h-dvh.overflow-hidden,
+  div.relative.z-10.flex.flex-col.flex-1.overflow-hidden,
+  div.flex-1.overflow-y-auto {
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important;
+    width: 100% !important;
+  }
+
+  /* Adjust chat messages padding and margin */
+  div.max-w-5xl.mx-auto.px-4.sm\:px-6.py-8 {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  /* Format user and assistant chat message items for print */
+  .flex.gap-3.group {
+    page-break-inside: avoid !important;
+    margin-bottom: 24px !important;
+  }
+
+  /* Make chat bubbles print clearly without dark mode colors or gradients */
+  div.px-4.py-3.rounded-2xl {
+    background: #f8fafc !important;
+    color: #0f172a !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+    border-radius: 12px !important;
+    width: 100% !important;
+  }
+
+  /* Print code blocks clearly */
+  pre, code {
+    background: #f1f5f9 !important;
+    color: #0f172a !important;
+    border: 1px solid #cbd5e1 !important;
+  }
+}
+

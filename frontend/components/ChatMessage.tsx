@@ -8,6 +8,7 @@ import {
 } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import { useTheme } from "@/lib/ThemeContext";
 import { Message } from "@/types";
+import { Bot, Check, Copy, Pencil, RefreshCw, UserRound, FileText } from "lucide-react";
 
 interface ChatMessageProps {
   message: Message;
@@ -28,7 +29,7 @@ function CodeBlock({ className, children }: Readonly<CodeBlockProps>) {
 
   if (!match) {
     return (
-      <code className="bg-gray-100 dark:bg-gray-700 text-pink-600 dark:text-pink-400 px-1 py-0.5 rounded text-xs font-mono">
+      <code className="bg-[var(--surface-2)] text-[var(--accent-2)] px-1 py-0.5 rounded text-xs font-mono">
         {children}
       </code>
     );
@@ -47,7 +48,7 @@ function CodeBlock({ className, children }: Readonly<CodeBlockProps>) {
       style={theme === "dark" ? oneDark : oneLight}
       language={match[1]}
       PreTag="div"
-      className="rounded-lg text-xs !my-0"
+      className="rounded-xl text-xs !my-0 border border-[var(--border-soft)]"
     >
       {flat.replace(/\n$/, "")}
     </SyntaxHighlighter>
@@ -60,15 +61,15 @@ function TypingIndicator() {
   return (
     <span className="inline-flex items-center gap-1 py-0.5">
       <span
-        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+        className="w-2 h-2 bg-[var(--text-3)] rounded-full animate-bounce"
         style={{ animationDelay: "0ms" }}
       />
       <span
-        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+        className="w-2 h-2 bg-[var(--text-3)] rounded-full animate-bounce"
         style={{ animationDelay: "150ms" }}
       />
       <span
-        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+        className="w-2 h-2 bg-[var(--text-3)] rounded-full animate-bounce"
         style={{ animationDelay: "300ms" }}
       />
     </span>
@@ -84,7 +85,7 @@ function StreamingCursor() {
 function formatRelativeTime(iso: string): string {
   // Backend returns naive UTC datetimes without a timezone suffix.
   // Appending 'Z' tells the browser to treat them as UTC.
-  const normalized = /[Z+]|\d{2}:\d{2}$/.test(iso) ? iso : iso + "Z";
+  const normalized = /([Z+]|\d{2}:\d{2})$/.test(iso) ? iso : iso + "Z";
   const diff = Date.now() - new Date(normalized).getTime();
   const mins = Math.floor(diff / 60_000);
   const hours = Math.floor(mins / 60);
@@ -106,6 +107,14 @@ export default function ChatMessage({
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editDraft, setEditDraft] = useState(message.content);
+
+  const handleDownloadFile = () => {
+    if (!message.file_base64 || !message.file_name) return;
+    const link = document.createElement("a");
+    link.href = `data:${message.file_media_type || "application/octet-stream"};base64,${message.file_base64}`;
+    link.download = message.file_name;
+    link.click();
+  };
 
   function handleCopy() {
     navigator.clipboard.writeText(message.content).then(() => {
@@ -137,9 +146,11 @@ export default function ChatMessage({
     if (message.content.length === 0 && isStreaming) {
       return <TypingIndicator />;
     }
+
+    let textNode;
     if (isUser) {
       if (isEditing) {
-        return (
+        textNode = (
           <textarea
             value={editDraft}
             onChange={(e) => setEditDraft(e.target.value)}
@@ -149,62 +160,94 @@ export default function ChatMessage({
             className="w-full bg-blue-700 text-white text-sm resize-none outline-none rounded placeholder-blue-300"
           />
         );
+      } else {
+        textNode = (
+          <span className="whitespace-pre-wrap">
+            {message.content}
+            {isStreaming && <StreamingCursor />}
+          </span>
+        );
       }
-      return (
-        <>
-          {message.content}
+    } else {
+      textNode = (
+        <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-pre:my-2 prose-pre:p-0 prose-code:before:content-none prose-code:after:content-none">
+          <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+            {message.content}
+          </ReactMarkdown>
           {isStreaming && <StreamingCursor />}
-        </>
+        </div>
       );
     }
+
     return (
-      <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-pre:my-2 prose-pre:p-0 prose-code:before:content-none prose-code:after:content-none">
-        <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-          {message.content}
-        </ReactMarkdown>
-        {isStreaming && <StreamingCursor />}
+      <div className="flex flex-col gap-2 w-full">
+        {textNode}
+        {message.file_base64 && (
+          <div className={`mt-2 pt-2 border-t ${isUser ? "border-white/10" : "border-[var(--border-soft)]"}`}>
+            {message.file_media_type?.startsWith("image/") ? (
+              <div className="relative group max-w-xs mt-1">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`data:${message.file_media_type};base64,${message.file_base64}`}
+                  alt={message.file_name ?? "Image attachment"}
+                  className="max-w-full max-h-60 rounded-xl object-cover border border-white/20 shadow-md transition-all group-hover:scale-[1.01]"
+                />
+              </div>
+            ) : (
+              <div className={`flex items-center gap-3 p-3 rounded-xl border ${
+                isUser 
+                  ? "bg-white/10 border-white/15 hover:bg-white/15" 
+                  : "bg-[var(--surface-2)] border-[var(--border-soft)] hover:bg-[var(--surface-3)]"
+              } transition-colors max-w-sm`}>
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
+                  isUser ? "bg-white/10 text-white" : "bg-[var(--accent-soft)] text-[var(--accent-1)]"
+                }`}>
+                  <FileText className="w-5 h-5" strokeWidth={2.2} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className={`text-xs font-semibold truncate ${isUser ? "text-white" : "text-[var(--text-1)]"}`}>
+                    {message.file_name ?? "Untitled file"}
+                  </p>
+                  <p className={`text-[10px] uppercase tracking-wider font-medium ${isUser ? "text-white/60" : "text-[var(--text-3)]"}`}>
+                    {message.file_media_type?.split("/")[1] ?? "Document"}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   }
+
+  const assistantBubbleClass = isStreaming
+    ? "streaming-border"
+    : "bg-[var(--surface-1)]/95 border-[var(--border-soft)]";
 
   return (
     <div className={`flex gap-3 group ${isUser ? "flex-row-reverse" : "flex-row"}`}>
       {/* Avatar */}
       <div
-        className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold select-none shadow-sm ${
+        className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold select-none shadow-sm ${
           isUser
-            ? "bg-gradient-to-br from-blue-500 to-blue-700 text-white"
-            : "bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 text-gray-500 dark:text-gray-300"
+            ? "bg-gradient-to-br from-[var(--accent-1)] to-[var(--accent-2)] text-white"
+            : "bg-[var(--surface-2)] text-[var(--text-2)]"
         }`}
       >
         {isUser ? (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            className="w-4 h-4"
-          >
-            <path d="M10 8a3 3 0 100-6 3 3 0 000 6zM3.465 14.493a1.23 1.23 0 00.41 1.412A9.957 9.957 0 0010 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.408-1.41a7.002 7.002 0 00-13.074.003z" />
-          </svg>
+          <UserRound className="w-4 h-4" strokeWidth={2.2} />
         ) : (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            className="w-4 h-4"
-          >
-            <path fillRule="evenodd" d="M4.848 2.771A49.144 49.144 0 0112 2.25c2.43 0 4.817.178 7.152.52 1.978.292 3.348 2.024 3.348 3.97v6.02c0 1.946-1.37 3.678-3.348 3.97a48.901 48.901 0 01-3.476.383.39.39 0 00-.297.17l-2.755 4.133a.75.75 0 01-1.248 0l-2.755-4.133a.39.39 0 00-.297-.17 48.9 48.9 0 01-3.476-.384c-1.978-.29-3.348-2.024-3.348-3.97V6.741c0-1.946 1.37-3.68 3.348-3.97z" clipRule="evenodd" />
-          </svg>
+          <Bot className="w-4 h-4" strokeWidth={2.2} />
         )}
       </div>
 
       {/* Bubble + action buttons */}
       <div className={`flex flex-col gap-1 ${isUser ? "items-end" : "items-start"} ${isUser ? "max-w-[80%]" : "flex-1 min-w-0"}`}>
         <div
-          className={`px-4 py-3 rounded-2xl text-sm leading-relaxed break-words ${
+          className={`px-4 py-3 rounded-2xl text-sm leading-relaxed break-words border ${
             isUser
-              ? "bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-tr-sm shadow-md shadow-blue-500/20 whitespace-pre-wrap w-full"
-              : "bg-white dark:bg-gray-800/80 border border-gray-100 dark:border-white/[0.06] text-gray-800 dark:text-gray-100 rounded-tl-sm shadow-sm w-full"
+              ? "bg-gradient-to-br from-[var(--accent-1)] to-[var(--accent-2)] border-[var(--accent-2)] text-white rounded-tr-sm shadow-md shadow-emerald-900/25 whitespace-pre-wrap w-full"
+              : `${assistantBubbleClass} text-[var(--text-1)] rounded-tl-sm shadow-sm w-full`
           }`}
         >
           {renderBubbleContent()}
@@ -212,7 +255,7 @@ export default function ChatMessage({
 
         {/* Timestamp */}
         {message.created_at && !isStreaming && (
-          <span className={`text-[10px] text-gray-400 dark:text-gray-600 px-1 ${isUser ? "self-end" : "self-start"}`}>
+          <span className={`text-[10px] text-[var(--text-3)] px-1 ${isUser ? "self-end" : "self-start"}`}>
             {formatRelativeTime(message.created_at)}
           </span>
         )}
@@ -225,11 +268,9 @@ export default function ChatMessage({
               <button
                 onClick={() => { setEditDraft(message.content); setIsEditing(true); }}
                 title="Edit message"
-                className="flex items-center gap-1 px-2 py-1 rounded text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="flex items-center gap-1 px-2 py-1 rounded text-xs text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[var(--surface-2)] transition-colors"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-                  <path d="M13.488 2.513a1.75 1.75 0 00-2.475 0L6.75 6.774a2.75 2.75 0 00-.596.892l-.848 2.047a.75.75 0 00.98.98l2.047-.848a2.75 2.75 0 00.892-.596l4.261-4.263a1.75 1.75 0 000-2.474zM4.75 14.25h-2a.75.75 0 010-1.5h2a.75.75 0 010 1.5z" />
-                </svg>
+                <Pencil className="w-3.5 h-3.5 icon-pop" strokeWidth={2.3} />
                 Edit
               </button>
             )}
@@ -239,13 +280,13 @@ export default function ChatMessage({
               <>
                 <button
                   onClick={handleEditSubmit}
-                  className="flex items-center gap-1 px-2 py-1 rounded text-xs bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 rounded text-xs bg-[var(--accent-1)] text-white hover:bg-[var(--accent-2)] transition-colors"
                 >
                   Send
                 </button>
                 <button
                   onClick={() => { setEditDraft(message.content); setIsEditing(false); }}
-                  className="flex items-center gap-1 px-2 py-1 rounded text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 rounded text-xs text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[var(--surface-2)] transition-colors"
                 >
                   Cancel
                 </button>
@@ -258,21 +299,16 @@ export default function ChatMessage({
                 <button
                   onClick={handleCopy}
                   title="Copy to clipboard"
-                  className="flex items-center gap-1 px-2 py-1 rounded text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 rounded text-xs text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[var(--surface-2)] transition-colors"
                 >
                   {copied ? (
                     <>
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5 text-green-500">
-                        <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z" clipRule="evenodd" />
-                      </svg>
+                      <Check className="w-3.5 h-3.5 text-green-500" strokeWidth={2.4} />
                       <span className="text-green-500">Copied!</span>
                     </>
                   ) : (
                     <>
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-                        <path fillRule="evenodd" d="M11.986 3H12a2 2 0 0 1 2 2v6a2 2 0 0 1-1.5 1.937V7A2.5 2.5 0 0 0 10 4.5H4.063A2 2 0 0 1 6 3h.014A2.25 2.25 0 0 1 8.25 1h1.5a2.25 2.25 0 0 1 2.236 2ZM10.5 4v-.175a.75.75 0 0 0-.75-.75h-1.5a.75.75 0 0 0-.75.75V4h3Z" clipRule="evenodd" />
-                        <path d="M3 6a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H3Z" />
-                      </svg>
+                      <Copy className="w-3.5 h-3.5 icon-pop" strokeWidth={2.3} />
                       Copy
                     </>
                   )}
@@ -282,11 +318,9 @@ export default function ChatMessage({
                   <button
                     onClick={onRegenerate}
                     title="Regenerate response"
-                    className="flex items-center gap-1 px-2 py-1 rounded text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    className="flex items-center gap-1 px-2 py-1 rounded text-xs text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[var(--surface-2)] transition-colors"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-                      <path fillRule="evenodd" d="M8 2.5a5.487 5.487 0 0 0-4.131 1.869l1.204 1.204A.25.25 0 0 1 4.896 6H1.25A.25.25 0 0 1 1 5.75V2.104a.25.25 0 0 1 .427-.177l1.38 1.38A7.001 7.001 0 0 1 14.95 7.16a.75.75 0 0 1-1.49.178A5.501 5.501 0 0 0 8 2.5ZM1.705 8.005a.75.75 0 0 1 .834.656 5.501 5.501 0 0 0 9.592 2.97l-1.204-1.204a.25.25 0 0 1 .177-.427h3.646a.25.25 0 0 1 .25.25v3.646a.25.25 0 0 1-.427.177l-1.38-1.38A7.002 7.002 0 0 1 1.05 8.84a.75.75 0 0 1 .656-.834Z" clipRule="evenodd" />
-                    </svg>
+                    <RefreshCw className="w-3.5 h-3.5 icon-pop" strokeWidth={2.3} />
                     Regenerate
                   </button>
                 )}
