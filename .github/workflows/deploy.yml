@@ -10,8 +10,27 @@ env:
   RESOURCE_GROUP: ${{ secrets.RESOURCE_GROUP }}
 
 jobs:
+  # ── 0. Detect whether deployment secrets are configured ────────────────────
+  preflight:
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+
+    steps:
+      - id: check
+        run: |
+          if [ -n "${{ secrets.AZURE_CREDENTIALS }}" ] && [ -n "${{ secrets.ACR_NAME }}" ] && [ -n "${{ secrets.RESOURCE_GROUP }}" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "Azure deployment secrets found."
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "Azure deployment secrets are missing; skipping deploy workflow."
+          fi
+
   # ── 1. Build Docker images and push to Azure Container Registry ─────────────
   build:
+    needs: preflight
+    if: ${{ needs.preflight.outputs.ready == 'true' }}
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
@@ -48,6 +67,7 @@ jobs:
   # ── 2. Deploy updated images to Azure Container Apps ───────────────────────
   deploy:
     needs: build
+    if: ${{ needs.preflight.outputs.ready == 'true' }}
     runs-on: ubuntu-latest
 
     steps:
