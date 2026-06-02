@@ -37,7 +37,6 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
     });
 
     kc.init({
-      onLoad: "check-sso",
       checkLoginIframe: false,
       pkceMethod: "S256",
     })
@@ -100,7 +99,7 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
 
   const login = () => {
     if (keycloakInstance) {
-      keycloakInstance.login();
+      keycloakInstance.login({ prompt: "login" });
     }
   };
 

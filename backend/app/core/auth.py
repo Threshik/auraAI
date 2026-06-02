@@ -11,18 +11,46 @@ security = HTTPBearer()
 # Cache JWKS keys
 _jwks_cache: Dict[str, Any] = {}
 
+def _candidate_realm_urls() -> list[str]:
+    """Generate likely realm base URLs across Keycloak distributions.
+
+    Some providers expose realms under /auth/realms/... while others use /realms/...
+    """
+    base = KEYCLOAK_URL.rstrip("/")
+    realm = KEYCLOAK_REALM
+    candidates = [
+        f"{base}/realms/{realm}",
+        f"{base}/auth/realms/{realm}",
+    ]
+    if base.endswith("/auth"):
+        root = base[:-5].rstrip("/")
+        candidates.append(f"{root}/realms/{realm}")
+
+    # Deduplicate while preserving order.
+    seen = set()
+    unique: list[str] = []
+    for u in candidates:
+        if u not in seen:
+            seen.add(u)
+            unique.append(u)
+    return unique
+
 def get_jwks_keys():
     global _jwks_cache
     if not _jwks_cache:
-        try:
-            jwks_url = f"{KEYCLOAK_URL.rstrip('/')}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/certs"
-            with httpx.Client(timeout=10.0) as client:
-                response = client.get(jwks_url)
-                response.raise_for_status()
-                _jwks_cache = response.json()
-        except Exception as e:
-            # We fail silently here but get_jwks_keys will return empty list, failing verify
-            pass
+        with httpx.Client(timeout=10.0) as client:
+            for realm_url in _candidate_realm_urls():
+                try:
+                    jwks_url = f"{realm_url}/protocol/openid-connect/certs"
+                    response = client.get(jwks_url)
+                    response.raise_for_status()
+                    data = response.json()
+                    if data.get("keys"):
+                        _jwks_cache = data
+                        _jwks_cache["_realm_url"] = realm_url
+                        break
+                except Exception:
+                    continue
     return _jwks_cache.get("keys", [])
 
 def verify_token(token: str) -> Dict[str, Any]:
@@ -30,10 +58,16 @@ def verify_token(token: str) -> Dict[str, Any]:
         # Get unverified header to find kid
         unverified_header = jwt.get_unverified_header(token)
         kid = unverified_header.get("kid")
+        alg = unverified_header.get("alg", "")
         if not kid:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token header is missing 'kid'.",
+            )
+        if isinstance(alg, str) and alg.startswith("HS"):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token uses HS* signing. Configure Keycloak realm/client access token algorithm to RS256 for JWKS validation.",
             )
             
         keys = get_jwks_keys()
@@ -51,10 +85,7 @@ def verify_token(token: str) -> Dict[str, Any]:
                 )
 
         public_key = RSAAlgorithm.from_jwk(jwk)
-        
-        # Verify token claims and signature
-        issuer_url = f"{KEYCLOAK_URL.rstrip('/')}/realms/{KEYCLOAK_REALM}"
-        
+
         # Decode and verify
         payload = jwt.decode(
             token,

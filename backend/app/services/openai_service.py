@@ -14,11 +14,27 @@ from app.core.config import (
     AZURE_OPENAI_DEPLOYMENT,
 )
 
-client = AsyncAzureOpenAI(
-    api_key=AZURE_OPENAI_API_KEY,
-    api_version=AZURE_OPENAI_API_VERSION,
-    azure_endpoint=AZURE_OPENAI_ENDPOINT,
-)
+client = None
+
+def _get_client() -> AsyncAzureOpenAI:
+    """Lazy load OpenAI client with validation."""
+    global client
+    if client is None:
+        if not AZURE_OPENAI_API_KEY:
+            raise ValueError("AZURE_OPENAI_API_KEY environment variable not set")
+        if not AZURE_OPENAI_ENDPOINT:
+            raise ValueError("AZURE_OPENAI_ENDPOINT environment variable not set")
+        if not AZURE_OPENAI_API_VERSION:
+            raise ValueError("AZURE_OPENAI_API_VERSION environment variable not set")
+        if not AZURE_OPENAI_DEPLOYMENT:
+            raise ValueError("AZURE_OPENAI_DEPLOYMENT environment variable not set")
+        
+        client = AsyncAzureOpenAI(
+            api_key=AZURE_OPENAI_API_KEY,
+            api_version=AZURE_OPENAI_API_VERSION,
+            azure_endpoint=AZURE_OPENAI_ENDPOINT,
+        )
+    return client
 
 _DEFAULT_SYSTEM = (
     "You are Aura AI, a helpful, friendly, and knowledgeable AI assistant. "
@@ -148,7 +164,7 @@ async def stream_response(
         "max_tokens": 1200,
     }
 
-    stream = await client.chat.completions.create(**call_kwargs)
+    stream = await _get_client().chat.completions.create(**call_kwargs)
 
     async for chunk in stream:
         if chunk.choices and chunk.choices[0].delta.content:
@@ -157,7 +173,7 @@ async def stream_response(
 
 async def generate_title(first_message: str) -> str:
     """Ask the model to produce a short conversation title."""
-    response = await client.chat.completions.create(
+    response = await _get_client().chat.completions.create(
         model=AZURE_OPENAI_DEPLOYMENT,
         messages=[
             {

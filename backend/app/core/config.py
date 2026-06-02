@@ -3,13 +3,13 @@ import os
 
 load_dotenv(override=True)
 
-APP_NAME = os.getenv("APP_NAME")
-FRONTEND_URL = os.getenv("FRONTEND_URL")
+APP_NAME = os.getenv("APP_NAME", "AI Chat Backend")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
 AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
 AZURE_OPENAI_DEPLOYMENT = os.getenv("AZURE_OPENAI_DEPLOYMENT")
-AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION")
+AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2025-01-01-preview")
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 KEYCLOAK_URL = os.getenv("KEYCLOAK_URL", "http://localhost:8080")

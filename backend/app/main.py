@@ -97,10 +97,13 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title=APP_NAME, lifespan=lifespan)
+app = FastAPI(title=APP_NAME or "AI Chat Backend", lifespan=lifespan)
 
+# Keep local development resilient even when env vars are partially configured.
 origins = [
     FRONTEND_URL,
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
 ]
 
 app.add_middleware(
