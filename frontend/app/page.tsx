@@ -270,17 +270,32 @@ export default function Home() {
   }
 
   async function handleSend() {
-    if (!activeId || (!input.trim() && !attachedFile) || isStreaming) return;
+    if ((!input.trim() && !attachedFile) || isStreaming) return;
     userScrolledUp.current = false;
     const text = input.trim();
     const file = attachedFile;
     setInput("");
     setAttachedFile(null);
-    await doSend(text, file);
+
+    let conversationId = activeId;
+    if (!conversationId) {
+      try {
+        const conv = await createConversation();
+        setConversations((prev) => [conv, ...prev]);
+        setActiveId(conv.id);
+        conversationId = conv.id;
+      } catch (err) {
+        console.error("Failed to create conversation before sending", err);
+        return;
+      }
+    }
+
+    await doSend(text, file, conversationId);
   }
 
-  async function doSend(text: string, file?: AttachedFile | null) {
-    if (!activeId || isStreaming) return;
+  async function doSend(text: string, file?: AttachedFile | null, conversationIdOverride?: number) {
+    const conversationId = conversationIdOverride ?? activeId;
+    if (!conversationId || isStreaming) return;
     userScrolledUp.current = false;
 
     // Reset typewriter state
@@ -322,7 +337,7 @@ export default function Home() {
     }, 10);
 
     try {
-      await sendMessage(text, activeId, (chunk) => {
+      await sendMessage(text, conversationId, (chunk) => {
         streamBufferRef.current += chunk; // buffer only — typewriter reveals it
       }, file?.base64, file?.mediaType, file?.fileName);
       // Stream finished — let the typewriter drain the buffer then stop
@@ -703,7 +718,7 @@ export default function Home() {
             value={input}
             onChange={setInput}
             onSend={handleSend}
-            disabled={isStreaming || !activeId}
+            disabled={isStreaming}
             attachedFile={attachedFile}
             onFileAttach={setAttachedFile}
           />
