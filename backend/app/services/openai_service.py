@@ -161,7 +161,7 @@ async def stream_response(
         "model": AZURE_OPENAI_DEPLOYMENT,
         "messages": all_messages,
         "stream": True,
-        "max_tokens": 1200,
+        "max_completion_tokens": 1200,
     }
 
     stream = await _get_client().chat.completions.create(**call_kwargs)
@@ -187,6 +187,6 @@ async def generate_title(first_message: str) -> str:
             {"role": "user", "content": first_message},
         ],
         stream=False,
-        max_tokens=20,
+        max_completion_tokens=20,
     )
     return response.choices[0].message.content.strip()
